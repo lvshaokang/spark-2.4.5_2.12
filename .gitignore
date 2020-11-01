@@ -1,0 +1,22 @@
+# Project exclude paths
+/common/kvstore/target/
+/common/network-common/target/
+/common/network-shuffle/target/
+/common/sketch/target/
+/common/tags/target/
+/common/unsafe/target/
+/core/target/
+/examples/target/
+/external/avro/target/
+/external/kafka-0-10/target/
+/external/kafka-0-10-sql/target/
+/graphx/target/
+/launcher/target/
+/mllib/target/
+/repl/target/
+/sql/catalyst/target/
+/sql/core/target/
+/sql/hive/target/
+/streaming/target/
+
+.idea
