@@ -28,6 +28,7 @@ import org.apache.spark.sql.execution.metric.SQLMetrics
 
 /**
  * Performs (external) sorting.
+ * 按照一定条件对输入RDD中数据进行排序
  *
  * @param global when true performs a global sort of all partitions by shuffling the data first
  *               if necessary.

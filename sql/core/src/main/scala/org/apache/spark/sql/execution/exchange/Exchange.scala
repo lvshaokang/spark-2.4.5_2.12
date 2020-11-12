@@ -36,6 +36,8 @@ import org.apache.spark.sql.types.StructType
  * Exchanges are the key class of operators that enable parallelism. Although the implementation
  * differs significantly, the concept is similar to the exchange operator described in
  * "Volcano -- An Extensible and Parallel Query Evaluation System" by Goetz Graefe.
+ *
+ *  负责对数据进行重分区
  */
 abstract class Exchange extends UnaryExecNode {
   override def output: Seq[Attribute] = child.output

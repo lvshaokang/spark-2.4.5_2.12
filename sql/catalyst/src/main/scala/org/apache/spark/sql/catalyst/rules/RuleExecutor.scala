@@ -37,11 +37,16 @@ object RuleExecutor {
   }
 }
 
+/**
+ * 规则驱动,调用Rule
+ */
 abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
 
   /**
    * An execution strategy for rules that indicates the maximum number of executions. If the
    * execution reaches fix point (i.e. converge) before maxIterations, it will stop.
+   *
+   * 策略,说明了迭代次数
    */
   abstract class Strategy { def maxIterations: Int }
 
@@ -68,6 +73,8 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
   /**
    * Executes the batches of rules defined by the subclass. The batches are executed serially
    * using the defined execution strategy. Within each batch, rules are also executed serially.
+   *
+   * 每个batch代表一套规则
    */
   def execute(plan: TreeType): TreeType = {
     var curPlan = plan
@@ -78,6 +85,10 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
       var iteration = 1
       var lastPlan = curPlan
       var continue = true
+
+      /*if (batch.name == "Resolution") {
+        println("-----------")
+      }*/
 
       // Run until fix point (or the max number of iterations as specified in the strategy.
       while (continue) {

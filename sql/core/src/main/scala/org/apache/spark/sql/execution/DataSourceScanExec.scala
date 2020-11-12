@@ -148,6 +148,8 @@ case class RowDataSourceScanExec(
 /**
  * Physical plan node for scanning data from HadoopFsRelations.
  *
+ * 数据文件扫描执行算子
+ *
  * @param relation The file-based relation to scan.
  * @param output Output attributes of the scan, including data attributes and partition attributes.
  * @param requiredSchema Required schema of the underlying relation, excluding partition columns.

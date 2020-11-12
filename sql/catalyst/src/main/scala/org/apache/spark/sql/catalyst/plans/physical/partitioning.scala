@@ -29,6 +29,12 @@ import org.apache.spark.sql.types.{DataType, IntegerType}
  *    operators (e.g., Aggregate) to perform partition local operations instead of global ones.
  *  - Intra-partition ordering of data: In this case the distribution describes guarantees made
  *    about how tuples are distributed within a single partition.
+ *
+ * 数据的分布
+ * 定义了查询执行时,同一个表达式下的不同数据元组在集群各个节点上的分布情况
+ * 1.节点间分区信息,即数据元组在集群不同的物理节点上是如何分区的。这个特性可以用来判断某些算子能否进行
+ *    局部计算,避免全局操作的代价
+ * 2.分区数据内排序信息,即单个分区内数据是如何分布的
  */
 sealed trait Distribution {
   /**
@@ -46,6 +52,8 @@ sealed trait Distribution {
 
 /**
  * Represents a distribution where no promises are made about co-location of data.
+ *
+ * 未指定分布
  */
 case object UnspecifiedDistribution extends Distribution {
   override def requiredNumPartitions: Option[Int] = None
@@ -58,6 +66,8 @@ case object UnspecifiedDistribution extends Distribution {
 /**
  * Represents a distribution that only has a single partition and all tuples of the dataset
  * are co-located.
+ *
+ * 只有一个分区,所有的数据元组存放在一起
  */
 case object AllTuples extends Distribution {
   override def requiredNumPartitions: Option[Int] = Some(1)
@@ -73,6 +83,9 @@ case object AllTuples extends Distribution {
  * [[Expression Expressions]] will be co-located. Based on the context, this
  * can mean such tuples are either co-located in the same partition or they will be contiguous
  * within a single partition.
+ *
+ * 数据经过clustering计算后,相同value的数据元组会被存放在一起
+ * clustering 起到了hash函数的作用
  */
 case class ClusteredDistribution(
     clustering: Seq[Expression],
@@ -122,6 +135,8 @@ case class HashClusteredDistribution(
  * [[ClusteredDistribution]] as an ordering will ensure that tuples that share the
  * same value for the ordering expressions are contiguous and will never be split across
  * partitions.
+ *
+ * 数据元组会根据ordering计算后的结果排序
  */
 case class OrderedDistribution(ordering: Seq[SortOrder]) extends Distribution {
   require(
@@ -140,6 +155,8 @@ case class OrderedDistribution(ordering: Seq[SortOrder]) extends Distribution {
 /**
  * Represents data where tuples are broadcasted to every node. It is quite common that the
  * entire set of tuples is transformed into different data structure.
+ *
+ * 广播分布,数据会被广播到所有节点上,
  */
 case class BroadcastDistribution(mode: BroadcastMode) extends Distribution {
   override def requiredNumPartitions: Option[Int] = Some(1)
@@ -155,19 +172,23 @@ case class BroadcastDistribution(mode: BroadcastMode) extends Distribution {
  * Describes how an operator's output is split across partitions. It has 2 major properties:
  *   1. number of partitions.
  *   2. if it can satisfy a given distribution.
+ *
+ * 对数据进行分区的操作
  */
 trait Partitioning {
   /** Returns the number of partitions that the data is split across */
   val numPartitions: Int
 
   /**
-   * Returns true iff the guarantees made by this [[Partitioning]] are sufficient
+   * Returns true if the guarantees made by this [[Partitioning]] are sufficient
    * to satisfy the partitioning scheme mandated by the `required` [[Distribution]],
    * i.e. the current dataset does not need to be re-partitioned for the `required`
    * Distribution (it is possible that tuples within a partition need to be reorganized).
    *
    * A [[Partitioning]] can never satisfy a [[Distribution]] if its `numPartitions` does't match
    * [[Distribution.requiredNumPartitions]].
+   *
+   * 当前的 partitioning 操作能否得到所需的数据分布
    */
   final def satisfies(required: Distribution): Boolean = {
     required.requiredNumPartitions.forall(_ == numPartitions) && satisfies0(required)
@@ -210,6 +231,8 @@ case object SinglePartition extends Partitioning {
  * Represents a partitioning where rows are split up across partitions based on the hash
  * of `expressions`.  All rows where `expressions` evaluate to the same values are guaranteed to be
  * in the same partition.
+ *
+ * expressions,用来计算Hash值的表达式列表
  */
 case class HashPartitioning(expressions: Seq[Expression], numPartitions: Int)
   extends Expression with Partitioning with Unevaluable {

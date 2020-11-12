@@ -33,7 +33,11 @@ import org.apache.spark.sql.types.{LongType, StructType}
 import org.apache.spark.util.ThreadUtils
 import org.apache.spark.util.random.{BernoulliCellSampler, PoissonSampler}
 
-/** Physical plan for Project. */
+/**
+ * Physical plan for Project.
+ *
+ * 列剪裁执行算子
+ */
 case class ProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
   extends UnaryExecNode with CodegenSupport {
 
@@ -83,7 +87,11 @@ case class ProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
 }
 
 
-/** Physical plan for Filter. */
+/**
+ * Physical plan for Filter.
+ *
+ * 过滤执行算子
+ */
 case class FilterExec(condition: Expression, child: SparkPlan)
   extends UnaryExecNode with CodegenSupport with PredicateHelper {
 
@@ -234,6 +242,7 @@ case class FilterExec(condition: Expression, child: SparkPlan)
 
 /**
  * Physical plan for sampling the dataset.
+ * 对输入RDD中的数据进行采样
  *
  * @param lowerBound Lower-bound of the sampling probability (usually 0.0)
  * @param upperBound Upper-bound of the sampling probability. The expected fraction sampled

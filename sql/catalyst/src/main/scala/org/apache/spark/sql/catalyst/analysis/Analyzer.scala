@@ -142,6 +142,9 @@ class Analyzer(
    */
   val postHocResolutionRules: Seq[Rule[LogicalPlan]] = Nil
 
+  /**
+   * 定义了10个batch
+   */
   lazy val batches: Seq[Batch] = Seq(
     Batch("Hints", fixedPoint,
       new ResolveHints.ResolveBroadcastHints(conf),
@@ -710,7 +713,14 @@ class Analyzer(
             u.failAnalysis(s"Inserting into a view is not allowed. View: ${v.desc.identifier}.")
           case other => i.copy(table = other)
         }
-      case u: UnresolvedRelation => resolveRelation(u)
+      case u: UnresolvedRelation =>
+        val resolve = resolveRelation(u)
+        println(
+          s"""
+            |resolve:
+            |${resolve}
+            |""".stripMargin)
+        resolve
     }
 
     // Look up the table with the given name from catalog. The database we used is decided by the

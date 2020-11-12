@@ -437,6 +437,11 @@ object SparkPlan {
     ThreadUtils.newDaemonCachedThreadPool("subquery", 16))
 }
 
+/**
+ * 叶子节点类型的物理执行计划不存在子节点
+ * 1. 物理计划中与 数据源相关的节点 都属于该类型
+ * 2. LeafExecNode 类型的 SparkPlan 负责对初始RDD的创建
+ */
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
   override def producedAttributes: AttributeSet = outputSet
@@ -449,12 +454,20 @@ object UnaryExecNode {
   }
 }
 
+/**
+ * UnaryExecNode 类型的物理执行计划的节点是一元的,即只包含1个子节点
+ * 作用:主要是对RDD进行转换操作
+ */
 trait UnaryExecNode extends SparkPlan {
   def child: SparkPlan
 
   override final def children: Seq[SparkPlan] = child :: Nil
 }
 
+/**BinaryExecNode 类型的SparkPlan具有两个子节点
+ * 除 CoGroupExec 外,其余的都是不同类型的 Join 执行计划
+ *
+ */
 trait BinaryExecNode extends SparkPlan {
   def left: SparkPlan
   def right: SparkPlan

@@ -57,7 +57,8 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
     val operatorOptimizationRuleSet =
       Seq(
         // Operator push down
-        PushProjectionThroughUnion,
+        // 算子下推
+        PushProjectionThroughUnion, // 列剪裁下推
         ReorderJoin,
         EliminateOuterJoin,
         PushPredicateThroughJoin,
@@ -66,6 +67,7 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
         ColumnPruning,
         InferFiltersFromConstraints,
         // Operator combine
+        // 算子组合
         CollapseRepartition,
         CollapseProject,
         CollapseWindow,
@@ -73,6 +75,7 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
         CombineLimits,
         CombineUnions,
         // Constant folding and strength reduction
+        // 常量折叠与长度削减
         NullPropagation,
         ConstantPropagation,
         FoldablePropagation,
@@ -118,7 +121,7 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
       ReplaceExpressions,
       ComputeCurrentTime,
       GetCurrentDatabase(sessionCatalog),
-      RewriteDistinctAggregates,
+      RewriteDistinctAggregates, // 对于包含Distinct算子的聚合语句,这条规则将其转换为两个常规的聚合表达式
       ReplaceDeduplicateWithAggregate) ::
     //////////////////////////////////////////////////////////////////////////////////////////
     // Optimizer rules start here
@@ -142,6 +145,7 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
       PullupCorrelatedPredicates) ::
     Batch("Subquery", Once,
       OptimizeSubqueries) ::
+    // 执行算子的替换操作
     Batch("Replace Operators", fixedPoint,
       RewriteExceptAll,
       RewriteIntersectAll,
@@ -149,6 +153,7 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
       ReplaceExceptWithFilter,
       ReplaceExceptWithAntiJoin,
       ReplaceDistinctWithAggregate) ::
+    // 处理聚合算子中的逻辑
     Batch("Aggregate", fixedPoint,
       RemoveLiteralFromGroupExpressions,
       RemoveRepetitionFromGroupExpressions) :: Nil ++

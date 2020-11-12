@@ -514,6 +514,8 @@ object WholeStageCodegenId {
  *
  * `doCodeGen()` will create a `CodeGenContext`, which will hold a list of variables for input,
  * used to generated code for [[BoundReference]].
+ *
+ * 将生成的代码整合成单个Java函数
  */
 case class WholeStageCodegenExec(child: SparkPlan)(val codegenStageId: Int)
     extends UnaryExecNode with CodegenSupport {
