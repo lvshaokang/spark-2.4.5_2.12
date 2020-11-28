@@ -96,11 +96,11 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   /** A sequence of rules that will be applied in order to the physical plan before execution. */
   protected def preparations: Seq[Rule[SparkPlan]] = Seq(
-    PlanSubqueries(sparkSession),
-    EnsureRequirements(sparkSession.sessionState.conf),
-    CollapseCodegenStages(sparkSession.sessionState.conf),
-    ReuseExchange(sparkSession.sessionState.conf),
-    ReuseSubquery(sparkSession.sessionState.conf))
+    PlanSubqueries(sparkSession), // 特殊子查询物理计划处理
+    EnsureRequirements(sparkSession.sessionState.conf), // 确保执行计划分区与排序正确性
+    CollapseCodegenStages(sparkSession.sessionState.conf), // 代码生成相关
+    ReuseExchange(sparkSession.sessionState.conf), // Exchange节点重用
+    ReuseSubquery(sparkSession.sessionState.conf)) // 子查询重用
 
   protected def stringOrError[A](f: => A): String =
     try f.toString catch { case e: AnalysisException => e.toString }

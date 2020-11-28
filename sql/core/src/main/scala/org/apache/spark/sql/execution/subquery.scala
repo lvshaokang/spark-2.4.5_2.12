@@ -135,6 +135,9 @@ case class InSubquery(
 
 /**
  * Plans scalar subqueries from that are present in the given [[SparkPlan]].
+ *
+ * @see https://github.com/apache/spark/pull/16954
+ * @see https://docs.google.com/document/d/1QDZ8JwU63RwGFS6KVF54Rjj9ZJyK33d49ZWbjFBaIgU/edit#
  */
 case class PlanSubqueries(sparkSession: SparkSession) extends Rule[SparkPlan] {
   def apply(plan: SparkPlan): SparkPlan = {

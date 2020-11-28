@@ -469,6 +469,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
 
   protected lazy val singleRowRdd = sparkContext.parallelize(Seq(InternalRow()), 1)
 
+  /** 内存数据表扫描策略 */
   object InMemoryScans extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
       case PhysicalOperation(projectList, filters, mem: InMemoryRelation) =>

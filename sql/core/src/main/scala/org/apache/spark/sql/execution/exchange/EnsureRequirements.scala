@@ -137,14 +137,19 @@ case class EnsureRequirements(conf: SQLConf) extends Rule[SparkPlan] {
     withCoordinator
   }
 
+  /**
+   * 确保每个节点的分区与排序需求
+   */
   private def ensureDistributionAndOrdering(operator: SparkPlan): SparkPlan = {
     val requiredChildDistributions: Seq[Distribution] = operator.requiredChildDistribution
     val requiredChildOrderings: Seq[Seq[SortOrder]] = operator.requiredChildOrdering
+    // 子节点
     var children: Seq[SparkPlan] = operator.children
     assert(requiredChildDistributions.length == children.length)
     assert(requiredChildOrderings.length == children.length)
 
     // Ensure that the operator's children satisfy their output distribution requirements.
+    // 单节点,判断每个子节点的分区方式是否可以满足对应的数据分布
     children = children.zip(requiredChildDistributions).map {
       case (child, distribution) if child.outputPartitioning.satisfies(distribution) =>
         child
@@ -156,6 +161,8 @@ case class EnsureRequirements(conf: SQLConf) extends Rule[SparkPlan] {
         ShuffleExchangeExec(distribution.createPartitioning(numPartitions), child)
     }
 
+    // 多节点,如果当前SparkPlan节点需要所有子节点分区方式兼容但并不能满足时,就需要创建Exchange节点
+
     // Get the indexes of children which have specified distribution requirements and need to have
     // same number of partitions.
     val childrenIndexes = requiredChildDistributions.zipWithIndex.filter {
@@ -164,11 +171,14 @@ case class EnsureRequirements(conf: SQLConf) extends Rule[SparkPlan] {
       case _ => true
     }.map(_._2)
 
+    // 所有子节点(满足数据分布的节点,过滤掉UnspecifiedDistribution和BroadcastDistribution的子节点)分区数
     val childrenNumPartitions =
       childrenIndexes.map(children(_).outputPartitioning.numPartitions).toSet
 
+    // 多个子节点
     if (childrenNumPartitions.size > 1) {
       // Get the number of partitions which is explicitly required by the distributions.
+      // 获取分布需要的分区数
       val requiredNumPartitions = {
         val numPartitionsSet = childrenIndexes.flatMap {
           index => requiredChildDistributions(index).requiredNumPartitions
@@ -188,6 +198,7 @@ case class EnsureRequirements(conf: SQLConf) extends Rule[SparkPlan] {
             val defaultPartitioning = distribution.createPartitioning(targetNumPartitions)
             child match {
               // If child is an exchange, we replace it with a new one having defaultPartitioning.
+              // 如果在第一个阶段对单个子节点操作时,已经创建了Exchange,对其进行替换
               case ShuffleExchangeExec(_, c, _) => ShuffleExchangeExec(defaultPartitioning, c)
               case _ => ShuffleExchangeExec(defaultPartitioning, child)
             }
@@ -200,13 +211,14 @@ case class EnsureRequirements(conf: SQLConf) extends Rule[SparkPlan] {
     // Now, we need to add ExchangeCoordinator if necessary.
     // Actually, it is not a good idea to add ExchangeCoordinators while we are adding Exchanges.
     // However, with the way that we plan the query, we do not have a place where we have a
-    // global picture of all shuffle dependencies of a post-shuffle stage. So, we add coordinator
+    // global picture of all shuffle dependencies of a post-shuffle stage(数据shuffle后的stage). So, we add coordinator
     // at here for now.
     // Once we finish https://issues.apache.org/jira/browse/SPARK-10665,
     // we can first add Exchanges and then add coordinator once we have a DAG of query fragments.
     children = withExchangeCoordinator(children, requiredChildDistributions)
 
     // Now that we've performed any necessary shuffles, add sorts to guarantee output orderings:
+    // 排序的处理,只需要对每个子节点单独处理
     children = children.zip(requiredChildOrderings).map { case (child, requiredOrdering) =>
       // If child.outputOrdering already satisfies the requiredOrdering, we do not need to sort.
       if (SortOrder.orderingSatisfies(child.outputOrdering, requiredOrdering)) {
@@ -216,6 +228,7 @@ case class EnsureRequirements(conf: SQLConf) extends Rule[SparkPlan] {
       }
     }
 
+    // 将SparkPlan中原有的子节点替换为新的子节点
     operator.withNewChildren(children)
   }
 

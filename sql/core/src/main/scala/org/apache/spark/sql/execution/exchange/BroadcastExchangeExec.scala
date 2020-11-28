@@ -38,6 +38,8 @@ import org.apache.spark.util.{SparkFatalException, ThreadUtils}
 /**
  * A [[BroadcastExchangeExec]] collects, transforms and finally broadcasts the result of
  * a transformed SparkPlan.
+ *
+ * 广播操作
  */
 case class BroadcastExchangeExec(
     mode: BroadcastMode,

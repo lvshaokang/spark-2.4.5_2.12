@@ -38,6 +38,8 @@ import org.apache.spark.util.collection.unsafe.sort.{PrefixComparators, RecordCo
 
 /**
  * Performs a shuffle that will result in the desired `newPartitioning`.
+ *
+ * 通过shuffle操作进行重分区处理
  */
 case class ShuffleExchangeExec(
     var newPartitioning: Partitioning,

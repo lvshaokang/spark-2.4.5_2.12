@@ -81,9 +81,7 @@ object CurrentOrigin {
 /**
  * TreeNode是SparkSQl中所有树结构的基类
  */
-// scalastyle:off
 abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
-// scalastyle:on
   self: BaseType =>
 
   val origin: Origin = CurrentOrigin.get
