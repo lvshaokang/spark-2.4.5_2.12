@@ -34,6 +34,7 @@ import org.apache.spark.sql.types._
 /**
  * A collection of [[Rule]] that can be used to coerce differing types that participate in
  * operations into compatible ones.
+ * 类型兼容
  *
  * Notes about type widening / tightest common types: Broadly, there are two cases when we need
  * to widen data types (e.g. union, binary comparison). In case 1, we are looking for a common

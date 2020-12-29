@@ -152,15 +152,15 @@ class Analyzer(
       ResolveHints.RemoveAllHints),
     Batch("Simple Sanity Check", Once,
       LookupFunctions),
-    Batch("Substitution", fixedPoint,
+    Batch("Substitution", fixedPoint, // 替换
       CTESubstitution,
       WindowsSubstitution,
       EliminateUnions,
       new SubstituteUnresolvedOrdinals(conf)),
-    Batch("Resolution", fixedPoint,
+    Batch("Resolution", fixedPoint, // 最常用的解析规则
       ResolveTableValuedFunctions ::
-      ResolveRelations ::
-      ResolveReferences ::
+      ResolveRelations :: // 解析数据表
+      ResolveReferences :: // 解析数据列
       ResolveCreateNamedStruct ::
       ResolveDeserializer ::
       ResolveNewInstance ::
@@ -172,7 +172,7 @@ class Analyzer(
       ResolveMissingReferences ::
       ExtractGenerator ::
       ResolveGenerate ::
-      ResolveFunctions ::
+      ResolveFunctions :: // 解析函数
       ResolveAliases ::
       ResolveSubquery ::
       ResolveSubqueryColumnAliases ::
@@ -189,7 +189,7 @@ class Analyzer(
       ResolveLambdaVariables(conf) ::
       ResolveTimeZone(conf) ::
       ResolveRandomSeed ::
-      TypeCoercion.typeCoercionRules(conf) ++
+      TypeCoercion.typeCoercionRules(conf) ++ //
       extendedResolutionRules : _*),
     Batch("Post-Hoc Resolution", Once, postHocResolutionRules: _*),
     Batch("Nondeterministic", Once,
@@ -651,6 +651,8 @@ class Analyzer(
 
   /**
    * Replaces [[UnresolvedRelation]]s with concrete relations from the catalog.
+   *
+   * 解析数据表
    */
   object ResolveRelations extends Rule[LogicalPlan] {
 
@@ -683,6 +685,7 @@ class Analyzer(
     def resolveRelation(plan: LogicalPlan): LogicalPlan = plan match {
       case u: UnresolvedRelation if !isRunningDirectlyOnFiles(u.tableIdentifier) =>
         val defaultDatabase = AnalysisContext.get.defaultDatabase
+        // lookupTableFromCatalog 查表
         val foundRelation = lookupTableFromCatalog(u, defaultDatabase)
         resolveRelation(foundRelation)
       // The view's child should be a logical plan parsed from the `desc.viewText`, the variable
@@ -717,7 +720,7 @@ class Analyzer(
         val resolve = resolveRelation(u)
         println(
           s"""
-            |resolve:
+            |resolveRelation:
             |${resolve}
             |""".stripMargin)
         resolve
@@ -911,7 +914,7 @@ class Analyzer(
               .orElse(resolveLiteralFunction(nameParts, u, q))
               .getOrElse(u)
           }
-        logDebug(s"Resolving $u to $result")
+        logInfo(s"Resolving $u to $result")
         result
       case UnresolvedExtractValue(child, fieldExpr) if child.resolved =>
         ExtractValue(child, fieldExpr, resolver)
@@ -974,7 +977,7 @@ class Analyzer(
       case plan if containsDeserializer(plan.expressions) => plan
 
       case q: LogicalPlan =>
-        logTrace(s"Attempting to resolve ${q.simpleString}")
+        logInfo(s"Attempting to resolve ${q.simpleString}")
         q.mapExpressions(resolve(_, q))
     }
 

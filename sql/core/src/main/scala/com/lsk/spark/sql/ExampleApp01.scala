@@ -34,11 +34,41 @@ object ExampleApp01 {
 
     df.createOrReplaceTempView("student")
 
+//    val frame = spark.sql("select id,count(name) from student group by id");
+
+//     val frame = spark.sql("select 'prefix_' || name from student where age > 18")
+
     val frame = spark.sql("select name from student where age > 18")
+
+    println("----------------------------")
+    println("----------------------------")
+
+    println(frame.queryExecution.optimizedPlan)
 
 //    println(frame.queryExecution.logical)
 
+    /*println(frame.queryExecution.logical)
+
+    println("----------------------------")
+
+    println(frame.queryExecution.analyzed)
+
+    println("----------------------------")
+
+//
+
+    println("----------------------------")
+
+    println(frame.queryExecution.sparkPlan)
+
+    println("----------------------------")
+
+    println(frame.queryExecution.executedPlan)
+
+    println("----------------------------")*/
+
     frame.show()
+
 
 
   }

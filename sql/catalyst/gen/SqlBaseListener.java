@@ -1741,6 +1741,18 @@ public interface SqlBaseListener extends ParseTreeListener {
 	 */
 	void exitSubqueryExpression(SqlBaseParser.SubqueryExpressionContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code superConcat}
+	 * labeled alternative in {@link SqlBaseParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterSuperConcat(SqlBaseParser.SuperConcatContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code superConcat}
+	 * labeled alternative in {@link SqlBaseParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitSuperConcat(SqlBaseParser.SuperConcatContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code cast}
 	 * labeled alternative in {@link SqlBaseParser#primaryExpression}.
 	 * @param ctx the parse tree

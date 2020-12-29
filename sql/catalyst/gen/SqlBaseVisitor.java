@@ -1032,6 +1032,13 @@ public interface SqlBaseVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitSubqueryExpression(SqlBaseParser.SubqueryExpressionContext ctx);
 	/**
+	 * Visit a parse tree produced by the {@code superConcat}
+	 * labeled alternative in {@link SqlBaseParser#primaryExpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSuperConcat(SqlBaseParser.SuperConcatContext ctx);
+	/**
 	 * Visit a parse tree produced by the {@code cast}
 	 * labeled alternative in {@link SqlBaseParser#primaryExpression}.
 	 * @param ctx the parse tree

@@ -42,6 +42,8 @@ import org.apache.spark.util.Utils
 private class MutableInt(var i: Int)
 
 /**
+ * 原点?
+ *
  * @param line 行号
  * @param startPosition 偏移量
  */
@@ -55,6 +57,7 @@ case class Origin(
  *
  * 提供节点位置功能,
  * 即能够根据TreeNode定位到对应的SQL字符串中的行数和起始位置
+ *
  */
 object CurrentOrigin {
   private val value = new ThreadLocal[Origin]() {
@@ -71,6 +74,9 @@ object CurrentOrigin {
       value.get.copy(line = Some(line), startPosition = Some(start)))
   }
 
+  /**
+   * 支持在TreeNode上执行操作的同时修改当前origin信息
+   */
   def withOrigin[A](o: Origin)(f: => A): A = {
     set(o)
     val ret = try f finally { reset() }
@@ -261,6 +267,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
    * Returns a copy of this node where `rule` has been recursively applied to it and all of its
    * children (pre-order). When `rule` does not apply to a given node it is left unchanged.
    *
+   * 先序遍历方式将规则作用于所有节点
+   *
    * @param rule the function used to transform this nodes children
    */
   def transformDown(rule: PartialFunction[BaseType, BaseType]): BaseType = {
@@ -280,6 +288,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
    * Returns a copy of this node where `rule` has been recursively applied first to all of its
    * children and then itself (post-order). When `rule` does not apply to a given node, it is left
    * unchanged.
+   *
+   * 后序遍历方式将规则作用于所有节点
    *
    * @param rule the function use to transform this nodes children
    */

@@ -342,6 +342,7 @@ case class Join(
     }
   }
 
+  // 在join操作中涉及两个数据表,因此可能存在相同ID的表达式,duplicateResolved 函数用来确保不会因为这种重复而出现表达式歧义
   def duplicateResolved: Boolean = left.outputSet.intersect(right.outputSet).isEmpty
 
   // Joins are only resolved if they don't introduce ambiguous expression ids.
@@ -588,6 +589,11 @@ case class Range(
   }
 }
 
+/**
+ * @param groupingExpressions 分组表达式列表
+ * @param aggregateExpressions 聚合表达式列表
+ * @param child 子节点
+ */
 case class Aggregate(
     groupingExpressions: Seq[Expression],
     aggregateExpressions: Seq[NamedExpression],

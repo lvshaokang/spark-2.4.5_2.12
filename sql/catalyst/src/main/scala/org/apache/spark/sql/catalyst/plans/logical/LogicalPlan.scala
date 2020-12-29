@@ -62,6 +62,8 @@ abstract class LogicalPlan
    * can override this (e.g.
    * [[org.apache.spark.sql.catalyst.analysis.UnresolvedRelation UnresolvedRelation]]
    * should return `false`).
+   *
+   * 该LoginPlan是否经过了解析
    */
   lazy val resolved: Boolean = expressions.forall(_.resolved) && childrenResolved
 
@@ -97,11 +99,14 @@ abstract class LogicalPlan
    * Optionally resolves the given strings to a [[NamedExpression]] using the input from all child
    * nodes of this LogicalPlan. The attribute is expressed as
    * as string in the following form: `[scope].AttributeName.[nested].[fields]...`.
+   *
+   * resolveChildren并不能确保一次分析成功
    */
   def resolveChildren(
       nameParts: Seq[String],
-      resolver: Resolver): Option[NamedExpression] =
+      resolver: Resolver): Option[NamedExpression] = {
     childAttributes.resolve(nameParts, resolver)
+  }
 
   /**
    * Optionally resolves the given strings to a [[NamedExpression]] based on the output of this

@@ -609,6 +609,7 @@ primaryExpression
     | base=primaryExpression '.' fieldName=identifier                                          #dereference
     | '(' expression ')'                                                                       #parenthesizedExpression
     | EXTRACT '(' field=identifier FROM source=valueExpression ')'                             #extract
+    | left=primaryExpression '||' right=primaryExpression                                      #superConcat
     ;
 
 constant

@@ -489,6 +489,10 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
           }
         } else if (aggregation != null) {
           val aggregate = withAggregation(aggregation, namedExpressions, withFilter)
+          println(
+            s"""
+              |aggregate:
+              |${aggregate}""".stripMargin)
           aggregate.optionalMap(having)(withHaving)
         } else {
           // When hitting this branch, `having` must be null.
@@ -533,6 +537,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * separated) relations here, these get converted into a single plan by condition-less inner join.
    */
   override def visitFromClause(ctx: FromClauseContext): LogicalPlan = withOrigin(ctx) {
+    // (left, relation) left 表示返回结果对象 relation 集合中每一个值
     val from = ctx.relation.asScala.foldLeft(null: LogicalPlan) { (left, relation) =>
       val right = plan(relation.relationPrimary)
       val join = right.optionalMap(left)(Join(_, _, Inner, None))
@@ -622,6 +627,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
       ctx: AggregationContext,
       selectExpressions: Seq[NamedExpression],
       query: LogicalPlan): LogicalPlan = withOrigin(ctx) {
+    // 分组表达式列表
     val groupByExpressions = expressionList(ctx.groupingExpressions)
 
     if (ctx.GROUPING != null) {
@@ -1329,6 +1335,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
         expressions
     }
     val funcId = replaceFunctions(visitFunctionName(ctx.qualifiedName), ctx)
+    // funcId: 聚合函数名 arguments: 参数列表 isDistinct: 是否包含isDistinct的boolean值
     val function = UnresolvedFunction(funcId, arguments, isDistinct)
 
 
@@ -1870,5 +1877,10 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
     import ctx._
     val structField = StructField(identifier.getText, typedVisit(dataType), nullable = true)
     if (STRING == null) structField else structField.withComment(string(STRING))
+  }
+
+  override protected def visitSuperConcat(ctx: SuperConcatContext): Expression = withOrigin(ctx) {
+    val arguments = Seq(ctx.left, ctx.right).map(expression)
+    UnresolvedFunction("concat", arguments, false)
   }
 }

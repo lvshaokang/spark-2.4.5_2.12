@@ -86,10 +86,6 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
       var lastPlan = curPlan
       var continue = true
 
-      /*if (batch.name == "Resolution") {
-        println("-----------")
-      }*/
-
       // Run until fix point (or the max number of iterations as specified in the strategy.
       while (continue) {
         curPlan = batch.rules.foldLeft(curPlan) {
@@ -101,7 +97,7 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
             if (!result.fastEquals(plan)) {
               queryExecutionMetrics.incNumEffectiveExecution(rule.ruleName)
               queryExecutionMetrics.incTimeEffectiveExecutionBy(rule.ruleName, runTime)
-              logTrace(
+              logInfo(
                 s"""
                   |=== Applying Rule ${rule.ruleName} ===
                   |${sideBySide(plan.treeString, result.treeString).mkString("\n")}

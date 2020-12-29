@@ -206,6 +206,8 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
    *
    * Plan nodes that require special canonicalization should override [[doCanonicalize()]].
    * They should remove expressions cosmetic variations themselves.
+   *
+   *
    */
   @transient final lazy val canonicalized: PlanType = {
     var plan = doCanonicalize()

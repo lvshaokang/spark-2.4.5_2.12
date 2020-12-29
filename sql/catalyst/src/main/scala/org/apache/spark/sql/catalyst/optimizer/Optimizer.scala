@@ -57,30 +57,32 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
     val operatorOptimizationRuleSet =
       Seq(
         // Operator push down
-        // 算子下推
+        // ===算子下推
         PushProjectionThroughUnion, // 列剪裁下推
         ReorderJoin,
         EliminateOuterJoin,
-        PushPredicateThroughJoin,
+        PushPredicateThroughJoin, // Join谓词下推
         PushDownPredicate,
         LimitPushDown,
         ColumnPruning,
-        InferFiltersFromConstraints,
+        InferFiltersFromConstraints, // 约束条件提取
+
         // Operator combine
-        // 算子组合
+        // ===算子组合
         CollapseRepartition,
         CollapseProject,
         CollapseWindow,
         CombineFilters,
         CombineLimits,
         CombineUnions,
+
         // Constant folding and strength reduction
         // 常量折叠与长度削减
         NullPropagation,
         ConstantPropagation,
         FoldablePropagation,
         OptimizeIn,
-        ConstantFolding,
+        ConstantFolding, // 可以folding的表达式进行静态计算
         ReorderAssociativeOperator,
         LikeSimplification,
         BooleanSimplification,
@@ -118,7 +120,7 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
     Batch("Finish Analysis", Once,
       EliminateSubqueryAliases,
       EliminateView,
-      ReplaceExpressions,
+      ReplaceExpressions, // 表达式替换
       ComputeCurrentTime,
       GetCurrentDatabase(sessionCatalog),
       RewriteDistinctAggregates, // 对于包含Distinct算子的聚合语句,这条规则将其转换为两个常规的聚合表达式
@@ -769,6 +771,7 @@ object InferFiltersFromConstraints extends Rule[LogicalPlan]
 
   private def inferFilters(plan: LogicalPlan): LogicalPlan = plan transform {
     case filter @ Filter(condition, child) =>
+      println("filter.constraints ==> " + filter.constraints)
       val newFilters = filter.constraints --
         (child.constraints ++ splitConjunctivePredicates(condition))
       if (newFilters.nonEmpty) {
