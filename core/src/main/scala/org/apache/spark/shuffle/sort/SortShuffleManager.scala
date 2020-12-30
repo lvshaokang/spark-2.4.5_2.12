@@ -217,6 +217,10 @@ private[spark] class SerializedShuffleHandle[K, V](
 /**
  * Subclass of [[BaseShuffleHandle]], used to identify when we've chosen to use the
  * bypass merge sort shuffle path.
+ *
+ * @param shuffleId shuffleId
+ * @param numMaps ShuffleMapTask的个数
+ * @param dependency ShuffleDependency
  */
 private[spark] class BypassMergeSortShuffleHandle[K, V](
   shuffleId: Int,

@@ -32,16 +32,19 @@ object WordCountApp {
 
     val data = sc.parallelize(List(
       ("beijing,beijing"),
-      ("shanghai")
+      ("shanghai"),
+      ("beijing,chengdu"),
+      ("chongqing")
     ))
 
     data.flatMap(x => {
       x.split(",")
     }).map((_, 1))
-      .reduceByKey(_ + _)
+      .groupByKey(sc.defaultParallelism)
       // scalastyle:on println
       .foreach(println(_))
 
+//    Thread.sleep(10000000L)
 
     sc.stop()
 

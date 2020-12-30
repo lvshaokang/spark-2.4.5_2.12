@@ -135,7 +135,11 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     for (int i = 0; i < numPartitions; i++) {
       final Tuple2<TempShuffleBlockId, File> tempShuffleBlockIdPlusFile =
         blockManager.diskBlockManager().createTempShuffleBlock();
+      // 为每个分区创建一个临时的shuffle文件
       final File file = tempShuffleBlockIdPlusFile._2();
+      if (logger.isTraceEnabled()) {
+        logger.trace("temp shuffle file(per partition): " + file);
+      }
       final BlockId blockId = tempShuffleBlockIdPlusFile._1();
       partitionWriters[i] =
         blockManager.getDiskWriter(blockId, file, serInstance, fileBufferSize, writeMetrics);
@@ -145,22 +149,29 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     // included in the shuffle write time.
     writeMetrics.incWriteTime(System.nanoTime() - openStartTime);
 
+    // 遍历数据,将数据写入到对应的BufferedOutputStream中
     while (records.hasNext()) {
       final Product2<K, V> record = records.next();
       final K key = record._1();
+      // DiskBlockObjectWriter 输出流
       partitionWriters[partitioner.getPartition(key)].write(key, record._2());
     }
 
+    // 将每个分区的数据写入到磁盘上
     for (int i = 0; i < numPartitions; i++) {
       final DiskBlockObjectWriter writer = partitionWriters[i];
+      // 1.flush 2.new FileSegment()
       partitionWriterSegments[i] = writer.commitAndGet();
       writer.close();
     }
 
+    // 构建最终的shuffle输出文件
     File output = shuffleBlockResolver.getDataFile(shuffleId, mapId);
     File tmp = Utils.tempFileWith(output);
     try {
+      // 将每个分区的临时shuffle文件合并成一个最终的shuffle文件
       partitionLengths = writePartitionedFile(tmp);
+      // 将每个分区的offset写入index文件
       shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp);
     } finally {
       if (tmp.exists() && !tmp.delete()) {
