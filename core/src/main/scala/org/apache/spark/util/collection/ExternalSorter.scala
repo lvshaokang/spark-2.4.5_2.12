@@ -176,6 +176,16 @@ private[spark] class ExternalSorter[K, V, C](
    */
   private[spark] def numSpills: Int = spills.size
 
+  /**
+   * 插入数据到buffer中
+   * 1.需要map端聚合
+   *
+   * 2.不需要map端聚合
+   * 遍历每条数据,以<P,K,V>的形式插入到buffer(PartitionedPairBuffer,可以理解为是一个array)中,如果array存放不下,则会先扩容,如果还存放不下,就将record排序后,
+   * spill到磁盘上
+   *
+   * @param records records迭代器
+   */
   def insertAll(records: Iterator[Product2[K, V]]): Unit = {
     // TODO: stop combining if we find that the reduction factor isn't high
     val shouldCombine = aggregator.isDefined
@@ -660,6 +670,9 @@ private[spark] class ExternalSorter[K, V, C](
       }
     } else {
       // Merge spilled and in-memory data
+      // 将array中的record(array中的数据也会排序)与磁盘上已经排序的record进行全局merge
+      // merge时会根据聚合情况,排序情况,分别处理
+      // 如果没有定义聚合和排序,只需要将spill数据+buffer数据拼接到一起即可
       merge(spills, destructiveIterator(
         collection.partitionedDestructiveSortedIterator(comparator)))
     }

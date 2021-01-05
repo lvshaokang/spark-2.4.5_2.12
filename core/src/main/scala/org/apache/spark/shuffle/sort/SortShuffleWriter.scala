@@ -56,9 +56,11 @@ private[spark] class SortShuffleWriter[K, V, C](
       // In this case we pass neither an aggregator nor an ordering to the sorter, because we don't
       // care whether the keys get sorted in each partition; that will be done on the reduce side
       // if the operation being run is sortByKey.
+      // map端聚合=false,ordering=None(默认按partitionId排序)
       new ExternalSorter[K, V, V](
         context, aggregator = None, Some(dep.partitioner), ordering = None, dep.serializer)
     }
+    //
     sorter.insertAll(records)
 
     // Don't bother including the time to open the merged output file in the shuffle write time,
