@@ -47,9 +47,17 @@ private[spark] class SortShuffleWriter[K, V, C](
 
   private val writeMetrics = context.taskMetrics().shuffleWriteMetrics
 
-  /** Write a bunch of records to this task's output */
+  /**
+   * Write a bunch of records to this task's output
+   *
+   * 1.创建ExternalSorter对象,将数据插入到该对象
+   * 2.生成shuffle数据文件和索引文件
+   * 3.创建MapStatus对象,将Shuffle数据文件和索引文件的信息进行传输,这样shuffle read阶段就可以知道从哪些节点fetch哪些数据
+   *
+   * */
   override def write(records: Iterator[Product2[K, V]]): Unit = {
     sorter = if (dep.mapSideCombine) {
+      // map端聚合,ordering=keyOrdering
       new ExternalSorter[K, V, C](
         context, dep.aggregator, Some(dep.partitioner), dep.keyOrdering, dep.serializer)
     } else {

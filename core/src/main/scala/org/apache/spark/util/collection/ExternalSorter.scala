@@ -108,7 +108,7 @@ private[spark] class ExternalSorter[K, V, C](
   private val serializerManager = SparkEnv.get.serializerManager
   private val serInstance = serializer.newInstance()
 
-  // Use getSizeAsKb (not bytes) to maintain backwards compatibility if no units are provided
+  // Use getSizeAsKb (not bytes) to maintain backwards compatibility if no units are provided 32MB
   private val fileBufferSize = conf.getSizeAsKb("spark.shuffle.file.buffer", "32k").toInt * 1024
 
   // Size of object batches when reading/writing from serializers.
@@ -179,6 +179,9 @@ private[spark] class ExternalSorter[K, V, C](
   /**
    * 插入数据到buffer中
    * 1.需要map端聚合
+   * mergeValue/createCombiner的含义可以查看[[org.apache.spark.rdd.PairRDDFunctions#combineByKeyWithClassTag]](相信查看后,你就会想起来的!!!)
+   * createCombiner 定义初始值
+   * mergeValue 局部合并
    *
    * 2.不需要map端聚合
    * 遍历每条数据,以<P,K,V>的形式插入到buffer(PartitionedPairBuffer,可以理解为是一个array)中,如果array存放不下,则会先扩容,如果还存放不下,就将record排序后,
@@ -195,12 +198,15 @@ private[spark] class ExternalSorter[K, V, C](
       val mergeValue = aggregator.get.mergeValue
       val createCombiner = aggregator.get.createCombiner
       var kv: Product2[K, V] = null
+      // 第一次遇到一个key时调用createCombiner处理,非首次遇到同一个key对应的新的value时,调用mergeValue函数进行合并处理
       val update = (hadValue: Boolean, oldValue: C) => {
         if (hadValue) mergeValue(oldValue, kv._2) else createCombiner(kv._2)
       }
       while (records.hasNext) {
         addElementsRead()
         kv = records.next()
+        // 将key和value在`map`中存储或者修改
+        // 对同key的多个value进行合并,并用合并后的newValue替换oldValue
         map.changeValue((getPartition(kv._1), kv._1), update)
         maybeSpillCollection(usingMap = true)
       }
@@ -699,6 +705,7 @@ private[spark] class ExternalSorter[K, V, C](
 
     // Track location of each range in the output file
     val lengths = new Array[Long](numPartitions)
+    // 只需要一个fileBufferSize 1个文件
     val writer = blockManager.getDiskWriter(blockId, outputFile, serInstance, fileBufferSize,
       context.taskMetrics().shuffleWriteMetrics)
 
@@ -719,9 +726,12 @@ private[spark] class ExternalSorter[K, V, C](
       for ((id, elements) <- this.partitionedIterator) {
         if (elements.hasNext) {
           for (elem <- elements) {
+            // 向fileBufferSize中写数据
             writer.write(elem._1, elem._2)
           }
+          // flush new fileSegment
           val segment = writer.commitAndGet()
+          // 每个分区的大小
           lengths(id) = segment.length
         }
       }

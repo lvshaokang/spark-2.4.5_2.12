@@ -27,6 +27,7 @@ import org.apache.spark.annotation.DeveloperApi
  * :: DeveloperApi ::
  * A simple open hash table optimized for the append-only use case, where keys
  * are never removed, but the value for each key may be changed.
+ * 优化过的map, 不支持删除key,value, 支持向map中append数据和修改key对应的value
  *
  * This implementation uses quadratic probing with a power-of-2 hash table
  * size, which is guaranteed to explore all spaces for each key (see
