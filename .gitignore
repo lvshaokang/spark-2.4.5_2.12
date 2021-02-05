@@ -6,6 +6,7 @@
 /common/tags/target/
 /common/unsafe/target/
 /core/target/
+!/core/target/extra-resources/spark-version-info.properties
 /examples/target/
 /external/avro/target/
 /external/kafka-0-10/target/
@@ -18,5 +19,5 @@
 /sql/core/target/
 /sql/hive/target/
 /streaming/target/
-
+*.iml
 .idea

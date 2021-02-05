@@ -38,12 +38,12 @@ object ExampleApp01 {
 
 //     val frame = spark.sql("select 'prefix_' || name from student where age > 18")
 
-    val frame = spark.sql("select name from student where age > 18")
+    val frame = spark.sql("select [name] from [student] where age > 18")
 
-    println("----------------------------")
-    println("----------------------------")
+//    println("----------------------------")
+//    println("----------------------------")
 
-    println(frame.queryExecution.optimizedPlan)
+//    println(frame.queryExecution.optimizedPlan)
 
 //    println(frame.queryExecution.logical)
 

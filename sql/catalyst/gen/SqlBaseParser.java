@@ -1,4 +1,4 @@
-// Generated from D:/lamp/ruozedata/workspace/project/spark-source/spark-2.4.5/sql/catalyst/src/main/antlr4/org/apache/spark/sql/catalyst/parser\SqlBase.g4 by ANTLR 4.8
+// Generated from D:/lamp/Code/source/spark2.4.5/spark-2.4.5_2.12/sql/catalyst/src/main/antlr4/org/apache/spark/sql/catalyst/parser\SqlBase.g4 by ANTLR 4.9.1
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
@@ -10,7 +10,7 @@ import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class SqlBaseParser extends Parser {
-	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
+	static { RuntimeMetaData.checkVersion("4.9.1", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
 	protected static final PredictionContextCache _sharedContextCache =
