@@ -1056,7 +1056,6 @@ IDENTIFIER
 
 BACKQUOTED_IDENTIFIER
     : '`' ( ~'`' | '``' )* '`'
-    | '[' (~'[' | ']')* ']'
     ;
 
 fragment DECIMAL_DIGITS
