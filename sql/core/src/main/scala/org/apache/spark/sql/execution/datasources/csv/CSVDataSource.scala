@@ -19,7 +19,6 @@ package org.apache.spark.sql.execution.datasources.csv
 
 import java.net.URI
 import java.nio.charset.{Charset, StandardCharsets}
-
 import com.univocity.parsers.csv.CsvParser
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path}
@@ -27,7 +26,6 @@ import org.apache.hadoop.io.{LongWritable, Text}
 import org.apache.hadoop.mapred.TextInputFormat
 import org.apache.hadoop.mapreduce.Job
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
-
 import org.apache.spark.TaskContext
 import org.apache.spark.input.{PortableDataStream, StreamInputFormat}
 import org.apache.spark.internal.Logging
@@ -37,6 +35,8 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.datasources._
 import org.apache.spark.sql.execution.datasources.text.TextFileFormat
 import org.apache.spark.sql.types.StructType
+
+import scala.collection.mutable
 
 /**
  * Common functions for parsing CSV files
@@ -90,21 +90,42 @@ abstract class CSVDataSource extends Serializable {
         headerNames.diff(headerNames.distinct).distinct
       }
 
-      row.zipWithIndex.map { case (value, index) =>
+      // project = SPARK AND affectedVersion = 2.4.5 AND component = SQL AND resolution = Unresolved ORDER BY priority DESC, updated DESC
+      // BUG,即 safeHeader 后的name可能与原有字符重复,这样就会有问题
+      val headers = row.zipWithIndex.map { case (value, index) =>
         if (value == null || value.isEmpty || value == options.nullValue) {
           // When there are empty strings or the values set in `nullValue`, put the
           // index as the suffix.
           s"_c$index"
-        } else if (!caseSensitive && duplicates.contains(value.toLowerCase)) {
+        }
+        else if (!caseSensitive && duplicates.contains(value.toLowerCase)) {
           // When there are case-insensitive duplicates, put the index as the suffix.
           s"$value$index"
         } else if (duplicates.contains(value)) {
           // When there are duplicates, put the index as the suffix.
           s"$value$index"
-        } else {
+        }
+        else {
           value
         }
       }
+      
+//      val duplicatesSet = mutable.Set() ++ {
+//        val headerNames = headers.map(name => if (caseSensitive) name else name.toLowerCase)
+//        headerNames.diff(headerNames.distinct)
+//      }
+//
+//      val strings = headers.zipWithIndex.map { case (value, index) =>
+//        var name = value
+//        var key = if (caseSensitive) name else name.toLowerCase
+//        while (!duplicatesSet.add(key)) {
+//          key += index
+//          name += index
+//        }
+//        name
+//      }
+//      strings
+
     } else {
       row.zipWithIndex.map { case (_, index) =>
         // Uses default column names, "_c#" where # is its position of fields
