@@ -40,8 +40,24 @@ private[spark] class BlockStoreShuffleReader[K, C](
 
   private val dep = handle.dependency
 
-  /** Read the combined key-values for this reduce task */
+  /**
+   * Read the combined key-values for this reduce task
+   *
+   * external shuffle ???
+   * ShuffleBlockFetcherIterator.initialize 什么时候调用?
+   *
+   * 1.不需要聚合,不需要按Key进行排序,如 partitionBy()
+   *  优点: 逻辑和实现简单,内存消耗小
+   *  缺点: 不支持聚合、排序等复杂操作
+   * 2.不需要聚合,需要按Key进行排序,如 sortByKey() sortBy()
+   *  优点: 只需要一个Array结构就可以支持按照Key进行排序,Array大小可控,且具备扩容和spill到磁盘上的功能,不受数据规模限制
+   *  缺点: 排序增加计算时延
+   * 3.需要聚合,不需要/需要按Key进行排序,如 reduceByKey() aggregateByKey()
+   *  优点: 只需要一个Array+HashMap结构(ExternalAppendOnlyMap,可同时支持聚合+排序)就可以支持reduce端的聚合+排序功能,且具备扩容和spill的磁盘上的功能,支持小规模到大规模数据的聚合
+   *  缺点: 数据需要在内存中聚合,如果spill到磁盘上,还需要再次聚合,同时,聚合过的数据仍然需要放到Array中进行排序,内存消耗较大
+   */
   override def read(): Iterator[Product2[K, C]] = {
+    // 创建ShuffleBlockFetcherIterator
     val wrappedStreams = new ShuffleBlockFetcherIterator(
       context,
       blockManager.shuffleClient,
@@ -49,6 +65,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
       mapOutputTracker.getMapSizesByExecutorId(handle.shuffleId, startPartition, endPartition),
       serializerManager.wrapStream,
       // Note: we use getSizeAsMb when no suffix is provided for backwards compatibility
+      // spark.reducer.maxSizeInFlight reduce buffer的大小,默认48M
       SparkEnv.get.conf.getSizeAsMb("spark.reducer.maxSizeInFlight", "48m") * 1024 * 1024,
       SparkEnv.get.conf.getInt("spark.reducer.maxReqsInFlight", Int.MaxValue),
       SparkEnv.get.conf.get(config.REDUCER_MAX_BLOCKS_IN_FLIGHT_PER_ADDRESS),
@@ -57,6 +74,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
 
     val serializerInstance = dep.serializer.newInstance()
 
+    // 基于 wrappedStreams 迭代器,创建一个 (key,value) 的迭代器
     // Create a key/value iterator for each stream
     val recordIter = wrappedStreams.flatMap { case (blockId, wrappedStream) =>
       // Note: the asKeyValueIterator below wraps a key/value iterator inside of a
@@ -65,6 +83,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
       serializerInstance.deserializeStream(wrappedStream).asKeyValueIterator
     }
 
+    // 基于读到的每条记录来更新taskMetrics
     // Update the context task metrics for each record read.
     val readMetrics = context.taskMetrics.createTempShuffleReadMetrics()
     val metricIter = CompletionIterator[(Any, Any), Iterator[(Any, Any)]](
@@ -74,9 +93,11 @@ private[spark] class BlockStoreShuffleReader[K, C](
       },
       context.taskMetrics().mergeShuffleReadMetrics())
 
+    // 创建interruptible迭代器,为了支持shuffle数据读取任务的中断操作
     // An interruptible iterator must be used here in order to support task cancellation
     val interruptibleIter = new InterruptibleIterator[(Any, Any)](context, metricIter)
 
+    // 是否定义了聚合函数,如reduceByKey等
     val aggregatedIter: Iterator[Product2[K, C]] = if (dep.aggregator.isDefined) {
       if (dep.mapSideCombine) {
         // We are reading values that are already combined
