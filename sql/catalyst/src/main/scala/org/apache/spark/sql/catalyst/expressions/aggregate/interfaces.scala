@@ -92,6 +92,7 @@ case class AggregateExpression(
   extends Expression
   with Unevaluable {
 
+  // 聚合结果
   lazy val resultAttribute: Attribute = if (aggregateFunction.resolved) {
     AttributeReference(
       aggregateFunction.toString,
@@ -169,17 +170,17 @@ abstract class AggregateFunction extends Expression {
   final override def foldable: Boolean = false
 
   /** The schema of the aggregation buffer. */
-  def aggBufferSchema: StructType
+  def aggBufferSchema: StructType // 聚合缓冲区的schema信息
 
   /** Attributes of fields in aggBufferSchema. */
-  def aggBufferAttributes: Seq[AttributeReference]
+  def aggBufferAttributes: Seq[AttributeReference] // 聚合缓冲区的schema信息,返回的AttributeReference对应缓冲区数据列名
 
   /**
    * Attributes of fields in input aggregation buffers (immutable aggregation buffers that are
    * merged with mutable aggregation buffers in the merge() function or merge expressions).
    * These attributes are created automatically by cloning the [[aggBufferAttributes]].
    */
-  def inputAggBufferAttributes: Seq[AttributeReference]
+  def inputAggBufferAttributes: Seq[AttributeReference] // 获取输入数据的组成情况
 
   /**
    * Result of the aggregate function when the input is empty. This is currently only used for the

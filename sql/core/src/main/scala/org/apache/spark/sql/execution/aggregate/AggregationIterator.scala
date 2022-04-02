@@ -67,6 +67,7 @@ abstract class AggregationIterator(
       s"$aggregateExpressions can't have Partial/PartialMerge and Final/Complete in the same time.")
   }
 
+  // 聚合函数初始化
   // Initialize all AggregateFunctions by binding references if necessary,
   // and set inputBufferOffset and mutableBufferOffset.
   protected def initializeAggregateFunctions(
@@ -92,7 +93,7 @@ abstract class AggregationIterator(
           // PartialMerge and Final.
           val updatedFunc = func match {
             case function: ImperativeAggregate =>
-              function.withNewInputAggBufferOffset(inputBufferOffset)
+              function.withNewInputAggBufferOffset(inputBufferOffset) // 设置输入缓冲区的偏移量
             case function => function
           }
           inputBufferOffset += func.aggBufferSchema.length
@@ -150,18 +151,22 @@ abstract class AggregationIterator(
       .map(aggregateFunctions)
       .map(_.asInstanceOf[ImperativeAggregate])
 
+  /**
+   * 数据处理函数生成
+   * @return (InternalRow, InternalRow) => (当前的聚合缓冲区, 输入数据行row)
+   */
   // Initializing functions used to process a row.
   protected def generateProcessRow(
       expressions: Seq[AggregateExpression],
       functions: Seq[AggregateFunction],
       inputAttributes: Seq[Attribute]): (InternalRow, InternalRow) => Unit = {
     val joinedRow = new JoinedRow
-    if (expressions.nonEmpty) {
+    if (expressions.nonEmpty) { // 获取各aggregation中的update函数或merge函数
       val mergeExpressions = functions.zipWithIndex.flatMap {
         case (ae: DeclarativeAggregate, i) =>
           expressions(i).mode match {
-            case Partial | Complete => ae.updateExpressions
-            case PartialMerge | Final => ae.mergeExpressions
+            case Partial | Complete => ae.updateExpressions // 处理的是原始输入数据,采用的是update函数
+            case PartialMerge | Final => ae.mergeExpressions // 处理的是聚合缓冲区的数据,采用的是merge函数
           }
         case (agg: AggregateFunction, _) => Seq.fill(agg.aggBufferAttributes.length)(NoOp)
       }
@@ -202,12 +207,14 @@ abstract class AggregationIterator(
     UnsafeProjection.create(groupingExpressions, inputAttributes)
   protected val groupingAttributes = groupingExpressions.map(_.toAttribute)
 
+  // 聚合结果输出函数生成
   // Initializing the function used to generate the output row.
   protected def generateResultProjection(): (UnsafeRow, InternalRow) => UnsafeRow = {
     val joinedRow = new JoinedRow
     val modes = aggregateExpressions.map(_.mode).distinct
     val bufferAttributes = aggregateFunctions.flatMap(_.aggBufferAttributes)
     if (modes.contains(Final) || modes.contains(Complete)) {
+      // 对于final或者complete模式的聚合函数,直接对应resultExpression表达式
       val evalExpressions = aggregateFunctions.map {
         case ae: DeclarativeAggregate => ae.evaluateExpression
         case agg: AggregateFunction => NoOp
@@ -234,6 +241,7 @@ abstract class AggregationIterator(
         resultProjection(joinedRow(currentGroupingKey, aggregateResult))
       }
     } else if (modes.contains(Partial) || modes.contains(PartialMerge)) {
+      //  对于partial或者partialMerge模式的聚合函数,因为只是中间结果,要保存grouping语句与buffer中的所有的属性
       val resultProjection = UnsafeProjection.create(
         groupingAttributes ++ bufferAttributes,
         groupingAttributes ++ bufferAttributes)
@@ -256,7 +264,7 @@ abstract class AggregationIterator(
         }
         resultProjection(joinedRow(currentGroupingKey, currentBuffer))
       }
-    } else {
+    } else { // 不包含任何聚合函数且只有分组操作,直接创建projection
       // Grouping-only: we only output values based on grouping expressions.
       val resultProjection = UnsafeProjection.create(resultExpressions, groupingAttributes)
       resultProjection.initialize(partIndex)

@@ -74,10 +74,10 @@ class SortBasedAggregationIterator(
   ///////////////////////////////////////////////////////////////////////////
 
   // The partition key of the current partition.
-  private[this] var currentGroupingKey: UnsafeRow = _
+  private[this] var currentGroupingKey: UnsafeRow = _ // 当前的分组表达式
 
   // The partition key of next partition.
-  private[this] var nextGroupingKey: UnsafeRow = _
+  private[this] var nextGroupingKey: UnsafeRow = _ // 下一个分组表达式
 
   // The first row of next partition.
   private[this] var firstRowInNextGroup: InternalRow = _
@@ -86,7 +86,7 @@ class SortBasedAggregationIterator(
   private[this] var sortedInputHasNewGroup: Boolean = false
 
   // The aggregation buffer used by the sort-based aggregation.
-  private[this] val sortBasedAggregationBuffer: InternalRow = newBuffer
+  private[this] val sortBasedAggregationBuffer: InternalRow = newBuffer // 聚合缓冲区
 
   protected def initialize(): Unit = {
     if (inputIterator.hasNext) {
@@ -103,6 +103,7 @@ class SortBasedAggregationIterator(
 
   initialize()
 
+  // 当前分组数据的处理
   /** Processes rows in the current group. It will stop when it find a new group. */
   protected def processCurrentSortedGroup(): Unit = {
     currentGroupingKey = nextGroupingKey
@@ -116,12 +117,12 @@ class SortBasedAggregationIterator(
     // input row left in the iter.
     while (!findNextPartition && inputIterator.hasNext) {
       // Get the grouping key.
-      val currentRow = inputIterator.next()
-      val groupingKey = groupingProjection(currentRow)
+      val currentRow = inputIterator.next() // while循环不断获取输入数据,并赋值给currentRow
+      val groupingKey = groupingProjection(currentRow) // 得到groupingKey分组表达式
 
       // Check if the current row belongs the current input row.
-      if (currentGroupingKey == groupingKey) {
-        processRow(sortBasedAggregationBuffer, currentRow)
+      if (currentGroupingKey == groupingKey) { // 如果当前的分组表达式和groupingKey相同,说明当前分组数据仍然属于同一个分组内部
+        processRow(sortBasedAggregationBuffer, currentRow) // 处理当前数据
       } else {
         // We find a new group.
         findNextPartition = true
@@ -131,7 +132,7 @@ class SortBasedAggregationIterator(
     }
     // We have not seen a new group. It means that there is no new row in the input
     // iter. The current group is the last group of the iter.
-    if (!findNextPartition) {
+    if (!findNextPartition) { // 没有找到新组时,意味着inputIter中没有新行,当前组就是iter中的最后一组
       sortedInputHasNewGroup = false
     }
   }

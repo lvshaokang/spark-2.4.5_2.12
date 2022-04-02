@@ -63,7 +63,7 @@ case class SortAggregateExec(
   }
 
   override def requiredChildOrdering: Seq[Seq[SortOrder]] = {
-    groupingExpressions.map(SortOrder(_, Ascending)) :: Nil
+    groupingExpressions.map(SortOrder(_, Ascending)) :: Nil // 分组表达式列表中的每个表达式都必须满足升序排列
   }
 
   override def outputPartitioning: Partitioning = child.outputPartitioning

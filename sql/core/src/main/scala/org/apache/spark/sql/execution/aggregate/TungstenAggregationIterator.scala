@@ -171,13 +171,14 @@ class TungstenAggregationIterator(
     TaskContext.get().taskMemoryManager().pageSizeBytes
   )
 
+  // 聚合操作
   // The function used to read and process input rows. When processing input rows,
   // it first uses hash-based aggregation by putting groups and their buffers in
   // hashMap. If there is not enough memory, it will multiple hash-maps, spilling
   // after each becomes full then using sort to merge these spills, finally do sort
   // based aggregation.
   private def processInputs(fallbackStartsAt: (Int, Int)): Unit = {
-    if (groupingExpressions.isEmpty) {
+    if (groupingExpressions.isEmpty) { // 分组表达式为空时
       // If there is no grouping expressions, we can just reuse the same buffer over and over again.
       // Note that it would be better to eliminate the hash map entirely in the future.
       val groupingKey = groupingProjection.apply(null)
@@ -188,37 +189,38 @@ class TungstenAggregationIterator(
       }
     } else {
       var i = 0
-      while (inputIter.hasNext) {
+      while (inputIter.hasNext) { // while 循环中不断的获取输入数据newInput
         val newInput = inputIter.next()
-        val groupingKey = groupingProjection.apply(newInput)
+        val groupingKey = groupingProjection.apply(newInput) // 得到分组表达式
         var buffer: UnsafeRow = null
         if (i < fallbackStartsAt._2) {
-          buffer = hashMap.getAggregationBufferFromUnsafeRow(groupingKey)
+          buffer = hashMap.getAggregationBufferFromUnsafeRow(groupingKey) // 在hashmap中获取对应的聚合缓冲区
         }
-        if (buffer == null) {
-          val sorter = hashMap.destructAndCreateExternalSorter()
+        if (buffer == null) { // 获取不到对应的buffer,意味着hashmap内存空间已满
+          val sorter = hashMap.destructAndCreateExternalSorter() // 将内存数据spill到磁盘释放内存空间
           if (externalSorter == null) {
             externalSorter = sorter
           } else {
-            externalSorter.merge(sorter)
+            externalSorter.merge(sorter) // 多次spill的外部数据会进行合并操作
           }
           i = 0
-          buffer = hashMap.getAggregationBufferFromUnsafeRow(groupingKey)
-          if (buffer == null) {
+          buffer = hashMap.getAggregationBufferFromUnsafeRow(groupingKey) // 再次从hashmap获取聚合缓冲区
+          if (buffer == null) { // 如果还是获取不到,触发OOM
             // failed to allocate the first page
             throw new SparkOutOfMemoryError("No enough memory for aggregation")
           }
         }
+        // buffer不为空,直接调用processRow处理
         processRow(buffer, newInput)
         i += 1
       }
 
-      if (externalSorter != null) {
-        val sorter = hashMap.destructAndCreateExternalSorter()
-        externalSorter.merge(sorter)
-        hashMap.free()
+      if (externalSorter != null) { // 检查externalSorter对象,不为空,说明聚合过程中有触发spill的操作,部分数据spill到磁盘上
+        val sorter = hashMap.destructAndCreateExternalSorter() // 将hashmap中最后的数据spill到磁盘
+        externalSorter.merge(sorter) // 并与externalSorter中的数据合并
+        hashMap.free() // 释放hashmap
 
-        switchToSortBasedAggregation()
+        switchToSortBasedAggregation() // 切换到基于排序的聚合执行方式
       }
     }
   }
